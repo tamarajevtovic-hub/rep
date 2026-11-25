@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { parseAiPlan, buildAiPrompt } from './aiBridge';
 import { candidates, progress, suggestWorkout, suggestRun } from './recommend';
 import { completeWorkout, rescue, keysAvailable } from './game';
-import { findExercise } from './exercises';
+import { findExercise, exName } from './exercises';
+import { t, LINES } from './i18n';
 import { EMPTY } from './store';
 import type { AppData, Profile, Workout } from './types';
 
@@ -104,5 +105,35 @@ describe('igra', () => {
     expect(r.rescued).toBeDefined();
     expect(keysAvailable(r.data)).toBe(1);
     expect(rescue(r.data).rescued).toBeUndefined();
+  });
+});
+
+describe('engleski', () => {
+  it('predlog dobija engleski naslov, a vežbe ostaju pod kanonskim imenom', () => {
+    const w = suggestWorkout(profile, [], '2026-12-01', 'en');
+    expect(['Legs + upper body', 'Glutes + back', 'Conditioning', 'Full body']).toContain(w.title);
+    expect(findExercise(w.exercises[0].name)?.name).toBe(w.exercises[0].name);
+  });
+
+  it('prevodi nazive vežbi i ostavlja nepoznate', () => {
+    expect(exName('Goblet čučanj', 'en')).toBe('Goblet squat');
+    expect(exName('Moja vežba', 'en')).toBe('Moja vežba');
+  });
+
+  it('AI plan na engleskom se mapira na iste vežbe', () => {
+    const r = parseAiPlan('### 2026-12-01 | Legs\n- Goblet squat | 3x10 | 16kg\n### 2026-12-02 | Run\nRUN | 4 km');
+    expect(r.workouts[0].exercises[0].name).toBe('Goblet čučanj');
+    expect(r.workouts[1].run?.km).toBe(4);
+  });
+
+  it('engleski prompt je na engleskom', () => {
+    const txt = buildAiPrompt(profile, [], '2026-12-01', 'en');
+    expect(txt).toContain('Knee');
+    expect(txt).toContain('ANSWER ONLY');
+  });
+
+  it('svaki ključ ima prevod i iste promenljive', () => {
+    expect(t('en', 'home.toGo', { n: 3 })).toContain('3');
+    expect(LINES.en.mid[0]).toContain('{ime}');
   });
 });

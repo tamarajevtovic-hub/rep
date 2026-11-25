@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { SPRITES } from './lib/animals';
-import { DONE_LINES } from './lib/copy';
+import { ANIMAL_LABELS, LINES, type Key } from './lib/i18n';
 import { completeWorkout } from './lib/game';
-import { useStore } from './lib/store';
+import { useStore, useT } from './lib/store';
 import type { Workout } from './lib/types';
 import { Icon } from './components/ui';
 import { Onboarding } from './screens/Onboarding';
@@ -14,19 +13,24 @@ import { WorkoutEditor } from './screens/WorkoutEditor';
 
 type Tab = 'home' | 'plan' | 'sanctuary' | 'me';
 
-const TABS: { id: Tab; label: string; icon: 'home' | 'plan' | 'sanctuary' | 'me' }[] = [
-  { id: 'home', label: 'POČETNA', icon: 'home' },
-  { id: 'plan', label: 'PLAN', icon: 'plan' },
-  { id: 'sanctuary', label: 'SVETILIŠTE', icon: 'sanctuary' },
-  { id: 'me', label: 'JA', icon: 'me' },
+const TABS: { id: Tab; label: Key; icon: 'home' | 'plan' | 'sanctuary' | 'me' }[] = [
+  { id: 'home', label: 'nav.home', icon: 'home' },
+  { id: 'plan', label: 'nav.plan', icon: 'plan' },
+  { id: 'sanctuary', label: 'nav.sanctuary', icon: 'sanctuary' },
+  { id: 'me', label: 'nav.me', icon: 'me' },
 ];
 
 export function App() {
   const { data, setData } = useStore();
+  const { lang, tr } = useT();
   const [tab, setTab] = useState<Tab>('home');
   const [editing, setEditing] = useState<Workout | null>(null);
   const [editProfile, setEditProfile] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     if (!toast) return;
@@ -60,9 +64,9 @@ export function App() {
     const r = completeWorkout(data, w);
     setData(() => r.data);
     setEditing(null);
-    if (r.rare) setToast(`PLAN ISPUNJEN! Retka životinja: ${SPRITES[r.rare.animal].label} ${r.rare.name}!`);
-    else if (r.gotKey) setToast(DONE_LINES[data.workouts.length % DONE_LINES.length]);
-    else setToast('Odrađeno! (Ključ za danas je već uzet.)');
+    if (r.rare) setToast(tr('done.rare', { animal: ANIMAL_LABELS[lang][r.rare.animal], name: r.rare.name }));
+    else if (r.gotKey) setToast(LINES[lang].done[data.workouts.length % LINES[lang].done.length]);
+    else setToast(tr('done.noKey'));
   };
 
   return (
@@ -89,7 +93,7 @@ export function App() {
             {TABS.map((t) => (
               <button key={t.id} type="button" className={tab === t.id ? 'on' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setTab(t.id)}>
                 <Icon name={t.icon} />
-                {t.label}
+                {tr(t.label)}
               </button>
             ))}
           </nav>

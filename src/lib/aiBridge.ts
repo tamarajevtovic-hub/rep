@@ -1,17 +1,45 @@
 import { addDays, uid } from './dates';
-import { findExercise } from './exercises';
+import { exName, findExercise } from './exercises';
+import { EQUIP_LABELS, GOAL_LABELS, ISSUE_LABELS, PLACE_LABELS, type Lang } from './i18n';
 import { availableEquip } from './recommend';
-import {
-  EQUIP_LABEL, GOAL_LABEL, ISSUE_LABEL, PLACE_LABEL,
-  type ExerciseEntry, type Profile, type Workout,
-} from './types';
+import type { ExerciseEntry, Profile, Workout } from './types';
 
-function describeWorkout(w: Workout): string {
+const TXT = {
+  sr: {
+    run: 'Trčanje', min: 'min', intro: (a: string, b: string) => `Ti si iskusan trener. Napravi mi plan treninga za 7 dana, od ${a} do ${b}.`,
+    profile: 'MOJ PROFIL', goals: 'Ciljevi', where: 'Gde treniram', equip: 'Oprema', issues: 'Šta me muči', perWeek: 'Broj treninga nedeljno',
+    gym: 'teretana (sva oprema i mašine)', noEquip: 'bez opreme', general: 'opšta forma', nothing: 'ništa posebno',
+    recent: 'POSLEDNJI TRENINZI', noneYet: 'Još nemam odrađenih treninga.',
+    rules: 'PRAVILA',
+    r1: 'Prilagodi vežbe onome što me muči i izbegni ono što to opterećuje.',
+    r2: 'Postepeno povećavaj opterećenje u odnosu na poslednje treninge.',
+    r3: 'Ako treba, ubaci i trčanje.',
+    format: 'ODGOVORI ISKLJUČIVO U OVOM FORMATU, bez ikakvog drugog teksta:',
+    ex1: 'Naziv treninga', ex2: 'Naziv vežbe',
+    note: 'Napomene o formatu: datum je GGGG-MM-DD; kilaža je opciona; "s" posle broja znači sekunde. Red za trčanje uvek počinje sa TRCANJE.',
+  },
+  en: {
+    run: 'Run', min: 'min', intro: (a: string, b: string) => `You are an experienced coach. Make me a 7-day training plan, from ${a} to ${b}.`,
+    profile: 'MY PROFILE', goals: 'Goals', where: 'Where I train', equip: 'Equipment', issues: "What's bugging me", perWeek: 'Workouts per week',
+    gym: 'gym (all equipment and machines)', noEquip: 'no equipment', general: 'general fitness', nothing: 'nothing in particular',
+    recent: 'RECENT WORKOUTS', noneYet: "I don't have any completed workouts yet.",
+    rules: 'RULES',
+    r1: 'Adapt exercises to what is bugging me and avoid anything that strains it.',
+    r2: 'Gradually increase the load compared to my recent workouts.',
+    r3: 'Add running if it makes sense.',
+    format: 'ANSWER ONLY IN THIS FORMAT, with no other text:',
+    ex1: 'Workout name', ex2: 'Exercise name',
+    note: 'Format notes: the date is YYYY-MM-DD; weight is optional; "s" after a number means seconds. A running line always starts with TRCANJE.',
+  },
+};
+
+function describeWorkout(w: Workout, lang: Lang): string {
+  const T = TXT[lang];
   if (w.kind === 'run') {
-    return `${w.date} | Trčanje ${w.run?.km ?? '?'} km${w.run?.minutes ? ` za ${w.run.minutes} min` : ''}`;
+    return `${w.date} | ${T.run} ${w.run?.km ?? '?'} km${w.run?.minutes ? `, ${w.run.minutes} ${T.min}` : ''}`;
   }
   if (w.kind === 'quick') {
-    return `${w.date} | ${w.title}${w.durationMin ? `, ${w.durationMin} min` : ''}${w.note ? ` (${w.note})` : ''}`;
+    return `${w.date} | ${w.title}${w.durationMin ? `, ${w.durationMin} ${T.min}` : ''}${w.note ? ` (${w.note})` : ''}`;
   }
   const ex = w.exercises
     .map((e) => {
@@ -19,47 +47,48 @@ function describeWorkout(w: Workout): string {
       const sets = (done.length ? done : e.sets)
         .map((s) => `${s.reps ?? '?'}${e.unit === 'sec' ? 's' : ''}${s.kg ? `@${s.kg}kg` : ''}`)
         .join(', ');
-      return `  - ${e.name}: ${sets}`;
+      return `  - ${exName(e.name, lang)}: ${sets}`;
     })
     .join('\n');
   return `${w.date} | ${w.title}\n${ex}`;
 }
 
 /** Tekst koji korisnik kopira u besplatan AI čet (Claude, ChatGPT...). */
-export function buildAiPrompt(p: Profile, workouts: Workout[], today: string): string {
+export function buildAiPrompt(p: Profile, workouts: Workout[], today: string, lang: Lang = 'sr'): string {
+  const T = TXT[lang];
   const done = workouts
     .filter((w) => w.status === 'done')
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .slice(0, 10);
   const perWeek = Math.max(1, Math.round(p.monthlyTarget / 4.3));
-  const equip = p.place === 'teretana' ? 'teretana (sva oprema i mašine)' : availableEquip(p).map((e) => EQUIP_LABEL[e]).join(', ') || 'bez opreme';
+  const equip = p.place === 'teretana' ? T.gym : availableEquip(p).map((e) => EQUIP_LABELS[lang][e]).join(', ') || T.noEquip;
   const start = addDays(today, 1);
-  return `Ti si iskusan trener. Napravi mi plan treninga za 7 dana, od ${start} do ${addDays(start, 6)}.
+  return `${T.intro(start, addDays(start, 6))}
 
-MOJ PROFIL
-- Ciljevi: ${p.goals.map((g) => GOAL_LABEL[g]).join(', ') || 'opšta forma'}
-- Gde treniram: ${PLACE_LABEL[p.place]}
-- Oprema: ${equip}
-- Šta me muči: ${p.issues.map((i) => ISSUE_LABEL[i]).join(', ') || 'ništa posebno'}
-- Broj treninga nedeljno: ${perWeek}
+${T.profile}
+- ${T.goals}: ${p.goals.map((g) => GOAL_LABELS[lang][g]).join(', ') || T.general}
+- ${T.where}: ${PLACE_LABELS[lang][p.place]}
+- ${T.equip}: ${equip}
+- ${T.issues}: ${p.issues.map((i) => ISSUE_LABELS[lang][i]).join(', ') || T.nothing}
+- ${T.perWeek}: ${perWeek}
 
-POSLEDNJI TRENINZI
-${done.length ? done.map(describeWorkout).join('\n') : 'Još nemam odrađenih treninga.'}
+${T.recent}
+${done.length ? done.map((w) => describeWorkout(w, lang)).join('\n') : T.noneYet}
 
-PRAVILA
-- Prilagodi vežbe onome što me muči i izbegni ono što to opterećuje.
-- Postepeno povećavaj opterećenje u odnosu na poslednje treninge.
-- Ako treba, ubaci i trčanje.
+${T.rules}
+- ${T.r1}
+- ${T.r2}
+- ${T.r3}
 
-ODGOVORI ISKLJUČIVO U OVOM FORMATU, bez ikakvog drugog teksta:
+${T.format}
 
-### 2026-01-05 | Naziv treninga
-- Naziv vežbe | 3x10 | 16kg
+### 2026-01-05 | ${T.ex1}
+- ${T.ex2} | 3x10 | 16kg
 - Plank | 3x30s
-### 2026-01-07 | Trčanje
+### 2026-01-07 | ${T.run}
 TRCANJE | 5 km
 
-Napomene o formatu: datum je GGGG-MM-DD; kilaža je opciona; "s" posle broja znači sekunde.`;
+${T.note}`;
 }
 
 export interface ParseResult {
@@ -69,7 +98,7 @@ export interface ParseResult {
 
 const HEADER = /^#{1,4}\s*(\d{4}-\d{2}-\d{2})\s*[|–-]\s*(.+?)\s*$/;
 const EXERCISE = /^[-*•]\s*(.+?)\s*\|\s*(\d+)\s*[x×]\s*(\d+)\s*(s|sek|sec)?\s*(?:\|\s*([\d.,]+)\s*kg)?\s*$/i;
-const RUN = /^(?:[-*•]\s*)?TR[CČ]ANJE\s*\|\s*([\d.,]+)\s*km/i;
+const RUN = /^(?:[-*•]\s*)?(?:TR[CČ]ANJE|RUN(?:NING)?)\s*\|\s*([\d.,]+)\s*km/i;
 
 function num(s: string): number {
   return parseFloat(s.replace(',', '.'));
@@ -107,7 +136,7 @@ export function parseAiPlan(text: string): ParseResult {
       const kg = e[5] ? num(e[5]) : undefined;
       const entry: ExerciseEntry = {
         id: uid(),
-        name: def?.name ?? e[1],
+        name: def?.name ?? e[1], // poznate vežbe čuvamo pod kanonskim nazivom
         unit,
         target: `${sets} × ${reps}${unit === 'sec' ? 's' : ''}`,
         sets: Array.from({ length: sets }, () => ({ kg, reps, done: false })),

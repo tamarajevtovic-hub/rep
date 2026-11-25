@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { addDays, dayName, dayNum, monthName, startOfWeek, todayISO, uid } from '../lib/dates';
 import { suggestRun, suggestWorkout } from '../lib/recommend';
-import { useStore } from '../lib/store';
+import { useStore, useT } from '../lib/store';
+import { t, type Key, type Lang } from '../lib/i18n';
 import type { Workout, WorkoutKind } from '../lib/types';
 import { summary } from './Home';
 
@@ -12,14 +13,15 @@ function statusOf(w: Workout, today: string): Status {
   return w.date < today ? 'missed' : 'planned';
 }
 
-const TAG: Record<Status, { text: string; cls: string }> = {
-  done: { text: 'ODRAĐEN', cls: 'acid-tag' },
-  planned: { text: 'PLANIRAN', cls: 'pink-tag' },
-  missed: { text: 'PROPUŠTEN', cls: 'gray-tag' },
+const TAG: Record<Status, { key: Key; cls: string }> = {
+  done: { key: 'st.done', cls: 'acid-tag' },
+  planned: { key: 'st.planned', cls: 'pink-tag' },
+  missed: { key: 'st.missed', cls: 'gray-tag' },
 };
 
 export function Plan({ onOpen }: { onOpen: (w: Workout) => void }) {
   const { data } = useStore();
+  const { lang, tr } = useT();
   const p = data.profile!;
   const today = todayISO();
   const [weekStart, setWeekStart] = useState(startOfWeek(today));
@@ -37,37 +39,37 @@ export function Plan({ onOpen }: { onOpen: (w: Workout) => void }) {
     return 'none';
   };
 
-  const section = (w: Workout) => (w.date < today ? 'PROŠLO' : w.date === today ? 'DANAS' : 'SLEDI');
+  const section = (w: Workout) => (w.date < today ? 'past' : w.date === today ? 'today' : 'next');
   let lastSection = '';
 
   return (
     <div className="screen">
       <header className="row-between pad">
-        <h1 className="pixel h1">PLAN</h1>
+        <h1 className="pixel h1">{tr('plan.title')}</h1>
         <div className="row8">
-          <button type="button" className="icon-btn" aria-label="Prethodna nedelja" onClick={() => setWeekStart(addDays(weekStart, -7))}>‹</button>
-          <button type="button" className="chip small-chip" onClick={() => setWeekStart(startOfWeek(today))}>{monthName(weekStart)} {dayNum(weekStart)}.</button>
-          <button type="button" className="icon-btn" aria-label="Sledeća nedelja" onClick={() => setWeekStart(addDays(weekStart, 7))}>›</button>
+          <button type="button" className="icon-btn" aria-label={tr('plan.prev')} onClick={() => setWeekStart(addDays(weekStart, -7))}>‹</button>
+          <button type="button" className="chip small-chip" onClick={() => setWeekStart(startOfWeek(today))}>{lang === 'sr' ? `${dayNum(weekStart)}. ${monthName(weekStart, lang)}` : `${monthName(weekStart, lang).slice(0, 3)} ${dayNum(weekStart)}`}</button>
+          <button type="button" className="icon-btn" aria-label={tr('plan.next')} onClick={() => setWeekStart(addDays(weekStart, 7))}>›</button>
         </div>
       </header>
 
       <div className="week">
         {days.map((d) => (
           <div key={d} className={d === today ? 'day today' : 'day'}>
-            <div className="xs">{dayName(d)}</div>
+            <div className="xs">{dayName(d, lang)}</div>
             <div className="pixel small">{dayNum(d)}</div>
             <div className={`dot ${dot(d)}`} />
           </div>
         ))}
       </div>
       <div className="legend">
-        <span><i className="dot done" />Odrađen</span>
-        <span><i className="dot planned" />Planiran</span>
-        <span><i className="dot missed" />Propušten</span>
+        <span><i className="dot done" />{tr('lg.done')}</span>
+        <span><i className="dot planned" />{tr('lg.planned')}</span>
+        <span><i className="dot missed" />{tr('lg.missed')}</span>
       </div>
 
       <main className="scroll stack10">
-        {inWeek.length === 0 && <div className="empty">Prazna nedelja. Kauč se raduje. Ajde da ga razočaramo.</div>}
+        {inWeek.length === 0 && <div className="empty">{tr('plan.empty')}</div>}
         {inWeek.map((w) => {
           const s = section(w);
           const head = s !== lastSection ? s : null;
@@ -75,14 +77,14 @@ export function Plan({ onOpen }: { onOpen: (w: Workout) => void }) {
           const st = statusOf(w, today);
           return (
             <div key={w.id} className="stack10">
-              {head && <div className={`pixel tiny sec-${s === 'DANAS' ? 'acid' : s === 'SLEDI' ? 'pink' : 'muted'}`}>{head}</div>}
+              {head && <div className={`pixel tiny sec-${s === 'today' ? 'acid' : s === 'next' ? 'pink' : 'muted'}`}>{tr(`sec.${s}` as Key)}</div>}
               <button type="button" className={`wrow ${st}`} onClick={() => onOpen(w)}>
-                <div className="wdate"><div className="xs muted">{dayName(w.date)}</div><div className="pixel small">{dayNum(w.date)}</div></div>
+                <div className="wdate"><div className="xs muted">{dayName(w.date, lang)}</div><div className="pixel small">{dayNum(w.date)}</div></div>
                 <div className="grow left">
                   <div className="wtitle">{w.title}</div>
-                  <div className="muted small">{summary(w)}</div>
+                  <div className="muted small">{summary(w, lang)}</div>
                 </div>
-                <span className={`tag ${TAG[st].cls}`}>{TAG[st].text}</span>
+                <span className={`tag ${TAG[st].cls}`}>{tr(TAG[st].key)}</span>
               </button>
             </div>
           );
@@ -90,8 +92,8 @@ export function Plan({ onOpen }: { onOpen: (w: Workout) => void }) {
       </main>
 
       <footer className="foot grid2">
-        <button type="button" className="btn ghost" onClick={() => onOpen(blank('quick', today))}>Brzo loguj</button>
-        <button type="button" className="btn acid" onClick={() => setAdding(true)}>+ ISPLANIRAJ</button>
+        <button type="button" className="btn ghost" onClick={() => onOpen(blank('quick', today, lang))}>{tr('plan.quick')}</button>
+        <button type="button" className="btn acid" onClick={() => setAdding(true)}>{tr('plan.add')}</button>
       </footer>
 
       {adding && (
@@ -100,9 +102,9 @@ export function Plan({ onOpen }: { onOpen: (w: Workout) => void }) {
           onClose={() => setAdding(false)}
           onPick={(kind, date, suggest) => {
             setAdding(false);
-            if (suggest && kind === 'strength') onOpen(suggestWorkout(p, data.workouts, date));
-            else if (suggest && kind === 'run') onOpen(suggestRun(data.workouts, date));
-            else onOpen(blank(kind, date));
+            if (suggest && kind === 'strength') onOpen(suggestWorkout(p, data.workouts, date, lang));
+            else if (suggest && kind === 'run') onOpen(suggestRun(data.workouts, date, lang));
+            else onOpen(blank(kind, date, lang));
           }}
         />
       )}
@@ -110,13 +112,13 @@ export function Plan({ onOpen }: { onOpen: (w: Workout) => void }) {
   );
 }
 
-export function blank(kind: WorkoutKind, date: string): Workout {
+export function blank(kind: WorkoutKind, date: string, lang: Lang = 'sr'): Workout {
   return {
     id: uid(),
     date,
     status: 'planned',
     kind,
-    title: kind === 'run' ? 'Trčanje' : kind === 'quick' ? 'Trening sa trenerom' : 'Trening',
+    title: t(lang, kind === 'run' ? 'blank.run' : kind === 'quick' ? 'blank.quick' : 'blank.strength'),
     exercises: [],
     run: kind === 'run' ? {} : undefined,
     source: 'rucno',
@@ -124,27 +126,28 @@ export function blank(kind: WorkoutKind, date: string): Workout {
 }
 
 function AddSheet({ suggest, onClose, onPick }: { suggest: boolean; onClose: () => void; onPick: (k: WorkoutKind, date: string, suggest: boolean) => void }) {
+  const { tr } = useT();
   const [date, setDate] = useState(addDays(todayISO(), 1));
   return (
     <div className="sheet-bg" onClick={onClose}>
-      <div className="sheet stack12" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Isplaniraj trening">
-        <div className="pixel small">ISPLANIRAJ</div>
+      <div className="sheet stack12" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={tr('add.title')}>
+        <div className="pixel small">{tr('add.title')}</div>
         <label className="field">
-          <span className="muted small">Dan</span>
+          <span className="muted small">{tr('add.day')}</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
         {suggest && (
           <div className="grid2">
-            <button type="button" className="btn acid" onClick={() => onPick('strength', date, true)}>PREDLOG: SNAGA</button>
-            <button type="button" className="btn acid" onClick={() => onPick('run', date, true)}>PREDLOG: TRČANJE</button>
+            <button type="button" className="btn acid" onClick={() => onPick('strength', date, true)}>{tr('add.sugStrength')}</button>
+            <button type="button" className="btn acid" onClick={() => onPick('run', date, true)}>{tr('add.sugRun')}</button>
           </div>
         )}
         <div className="grid3">
-          <button type="button" className="btn ghost" onClick={() => onPick('strength', date, false)}>Snaga</button>
-          <button type="button" className="btn ghost" onClick={() => onPick('run', date, false)}>Trčanje</button>
-          <button type="button" className="btn ghost" onClick={() => onPick('quick', date, false)}>Brzi</button>
+          <button type="button" className="btn ghost" onClick={() => onPick('strength', date, false)}>{tr('add.strength')}</button>
+          <button type="button" className="btn ghost" onClick={() => onPick('run', date, false)}>{tr('add.run')}</button>
+          <button type="button" className="btn ghost" onClick={() => onPick('quick', date, false)}>{tr('add.quick')}</button>
         </div>
-        <button type="button" className="btn ghost" onClick={onClose}>Otkaži</button>
+        <button type="button" className="btn ghost" onClick={onClose}>{tr('cancel')}</button>
       </div>
     </div>
   );

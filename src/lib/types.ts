@@ -72,45 +72,11 @@ export interface Game {
 
 export interface AppData {
   version: 1;
+  lang?: 'sr' | 'en';
   profile: Profile | null;
   workouts: Workout[];
   measures: Measure[];
   game: Game;
 }
-
-export const GOAL_LABEL: Record<Goal, string> = {
-  snaga: 'Snaga',
-  mrsavljenje: 'Mršavljenje',
-  masa: 'Mišićna masa',
-  kondicija: 'Kondicija',
-  pokretljivost: 'Pokretljivost',
-};
-
-export const PLACE_LABEL: Record<Place, string> = {
-  teretana: 'Teretana',
-  kuca: 'Kod kuće',
-  napolju: 'Napolju',
-  kombinacija: 'Kombinacija',
-};
-
-export const EQUIP_LABEL: Record<Equip, string> = {
-  bucice: 'Bučice',
-  sipka: 'Šipka + tegovi',
-  gume: 'Gume',
-  zgibovi: 'Šipka za zgibove',
-  kettlebell: 'Kettlebell',
-  prostirka: 'Prostirka',
-  klupa: 'Klupa',
-  masine: 'Mašine',
-};
-
-export const ISSUE_LABEL: Record<Issue, string> = {
-  koleno: 'Koleno',
-  rame: 'Rame',
-  ledja: 'Donja leđa',
-  kukovi: 'Kukovi (pokretljivost)',
-  kor: 'Slab kor',
-  drzanje: 'Držanje',
-};
 
 export const HOME_EQUIP: Equip[] = ['bucice', 'sipka', 'gume', 'zgibovi', 'kettlebell', 'prostirka', 'klupa'];

@@ -1,6 +1,7 @@
 import { EXERCISES, canDo, findExercise, type ExerciseDef, type Pattern } from './exercises';
 import { HOME_EQUIP, type Equip, type ExerciseEntry, type Profile, type Workout } from './types';
 import { uid } from './dates';
+import { t, type Lang } from './i18n';
 
 export function availableEquip(p: Profile): Equip[] {
   if (p.place === 'teretana') return [...HOME_EQUIP, 'masine'];
@@ -26,14 +27,14 @@ interface Template {
   patterns: Pattern[];
 }
 
-function templates(p: Profile): Template[] {
+function templates(p: Profile, lang: Lang): Template[] {
   const cardio = p.goals.includes('kondicija') || p.goals.includes('mrsavljenje');
   return [
-    { title: 'Noge + gornji deo', patterns: ['noge', 'guranje', 'vucenje', 'kor'] },
-    { title: 'Zadnjica + leđa', patterns: ['kuk', 'vucenje', 'guranje', 'kor'] },
+    { title: t(lang, 'tpl.a'), patterns: ['noge', 'guranje', 'vucenje', 'kor'] },
+    { title: t(lang, 'tpl.b'), patterns: ['kuk', 'vucenje', 'guranje', 'kor'] },
     cardio
-      ? { title: 'Kondicija', patterns: ['noge', 'kardio', 'kuk', 'guranje', 'kardio', 'kor'] }
-      : { title: 'Celo telo', patterns: ['noge', 'kuk', 'guranje', 'vucenje', 'kor'] },
+      ? { title: t(lang, 'tpl.cardio'), patterns: ['noge', 'kardio', 'kuk', 'guranje', 'kardio', 'kor'] }
+      : { title: t(lang, 'tpl.full'), patterns: ['noge', 'kuk', 'guranje', 'vucenje', 'kor'] },
   ];
 }
 
@@ -108,10 +109,10 @@ function entryFor(def: ExerciseDef, scheme: Scheme, history: Workout[], setsOver
 }
 
 /** Predlog sledećeg treninga snage na osnovu profila i istorije. */
-export function suggestWorkout(p: Profile, history: Workout[], date: string): Workout {
+export function suggestWorkout(p: Profile, history: Workout[], date: string, lang: Lang = 'sr'): Workout {
   const scheme = schemeFor(p);
   const strengthCount = history.filter((w) => w.kind === 'strength' && w.status === 'done').length;
-  const tpls = templates(p);
+  const tpls = templates(p, lang);
   const tpl = tpls[strengthCount % tpls.length];
   const used = new Set<string>();
   const exercises: ExerciseEntry[] = [];
@@ -147,7 +148,7 @@ export function suggestWorkout(p: Profile, history: Workout[], date: string): Wo
 }
 
 /** Predlog trčanja: prošlo trčanje + ~10%, zaokruženo na 0,5 km. */
-export function suggestRun(history: Workout[], date: string): Workout {
+export function suggestRun(history: Workout[], date: string, lang: Lang = 'sr'): Workout {
   const runs = history
     .filter((w) => w.kind === 'run' && w.status === 'done' && w.run?.km)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -158,7 +159,7 @@ export function suggestRun(history: Workout[], date: string): Workout {
     date,
     status: 'planned',
     kind: 'run',
-    title: last ? `Trčanje ${km} km` : 'Trčanje 3 km lagano',
+    title: last ? t(lang, 'run.title', { km: String(km).replace('.', lang === 'sr' ? ',' : '.') }) : t(lang, 'run.first'),
     exercises: [],
     run: { km },
     source: 'predlog',

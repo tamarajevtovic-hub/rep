@@ -1,13 +1,29 @@
-import { companionLine } from '../lib/copy';
 import { addDays, daysBetween, monthName, startOfWeek, todayISO, monthKey } from '../lib/dates';
 import { companionLevel, doneInMonth, keysAvailable } from '../lib/game';
+import { LINES, t, type Lang } from '../lib/i18n';
 import { suggestRun, suggestWorkout } from '../lib/recommend';
-import { useStore } from '../lib/store';
+import { useStore, useT } from '../lib/store';
 import type { Workout } from '../lib/types';
 import { KeyBar, Sprite } from '../components/ui';
 
+function companionLine(lang: Lang, daysSince: number | null, name: string, seed: number): string {
+  const L = LINES[lang];
+  let list = L.never;
+  if (daysSince === 0) list = L.today;
+  else if (daysSince !== null && daysSince <= 2) list = L.short;
+  else if (daysSince !== null && daysSince <= 5) list = L.mid;
+  else if (daysSince !== null) list = L.long;
+  return list[seed % list.length].replace('{ime}', name);
+}
+
+function fmt(n: number, lang: Lang): string {
+  const s = n.toFixed(1);
+  return lang === 'sr' ? s.replace('.', ',') : s;
+}
+
 export function Home({ onOpen, onGo }: { onOpen: (w: Workout) => void; onGo: (tab: 'plan' | 'sanctuary') => void }) {
   const { data } = useStore();
+  const { lang, tr } = useT();
   const p = data.profile!;
   const today = todayISO();
   const done = data.workouts.filter((w) => w.status === 'done').sort((a, b) => (a.date < b.date ? 1 : -1));
@@ -36,7 +52,7 @@ export function Home({ onOpen, onGo }: { onOpen: (w: Workout) => void; onGo: (ta
     <div className="scroll stack16 pad-top">
       <header className="row-between">
         <div className="pixel logo">REP</div>
-        <button type="button" className="sticker" onClick={() => onGo('sanctuary')}>KLJUČEVI: {keysAvailable(data)}</button>
+        <button type="button" className="sticker" onClick={() => onGo('sanctuary')}>{tr('home.keys', { n: keysAvailable(data) })}</button>
       </header>
 
       <section className="card-cream">
@@ -45,69 +61,68 @@ export function Home({ onOpen, onGo }: { onOpen: (w: Workout) => void; onGo: (ta
           <div className="pixel tiny">{p.companionName.toUpperCase()} · LV {lvl.level}</div>
         </div>
         <div className="stack8 grow">
-          <div className="pixel tiny dark-pink">{p.name ? `${p.name.toUpperCase()}, SLUŠAJ:` : 'SAPUTNIK KAŽE:'}</div>
-          <p className="speech">{companionLine(daysSince, p.companionName, seed)}</p>
+          <div className="pixel tiny dark-pink">{p.name ? tr('home.listen', { name: p.name.toUpperCase() }) : tr('home.says')}</div>
+          <p className="speech">{companionLine(lang, daysSince, p.companionName, seed)}</p>
         </div>
       </section>
 
       <section className="dashed stack10">
         <div className="row-between">
-          <div className="pixel small">{monthName(today).toUpperCase()} · PLAN</div>
+          <div className="pixel small">{tr('home.monthPlan', { month: monthName(today, lang).toUpperCase() })}</div>
           <div className="pixel small acid">{monthDone}/{p.monthlyTarget}</div>
         </div>
         <KeyBar have={Math.min(monthDone, p.monthlyTarget)} total={p.monthlyTarget} />
-        <div className="muted small">
-          {toGo > 0 ? <>Još <b className="text">{toGo}</b> do retke životinje. Neko poseban čeka.</> : <>Plan ispunjen. Retka životinja je stigla u svetilište.</>}
-        </div>
+        <div className="muted small">{toGo > 0 ? tr('home.toGo', { n: toGo }) : tr('home.planDone')}</div>
       </section>
 
       <section className="card stack12">
         {todayPlanned ? (
           <>
-            <div className="row8"><span className="tag cyan">DANAS</span><span className="muted small">{todayPlanned.source === 'ai' ? 'iz AI plana' : 'planirano'}</span></div>
+            <div className="row8"><span className="tag cyan">{tr('home.today')}</span><span className="muted small">{todayPlanned.source === 'ai' ? tr('home.fromAi') : tr('home.planned')}</span></div>
             <div className="h2">{todayPlanned.title}</div>
-            <div className="muted small">{summary(todayPlanned)}</div>
-            <button type="button" className="btn acid" onClick={() => onOpen(todayPlanned)}>LOGUJ TRENING</button>
+            <div className="muted small">{summary(todayPlanned, lang)}</div>
+            <button type="button" className="btn acid" onClick={() => onOpen(todayPlanned)}>{tr('home.log')}</button>
           </>
         ) : todayDone ? (
           <>
-            <div className="row8"><span className="tag acid-tag">ODRAĐENO</span></div>
+            <div className="row8"><span className="tag acid-tag">{tr('home.doneTag')}</span></div>
             <div className="h2">{todayDone.title}</div>
-            <div className="muted small">Posao za danas je gotov. Odmori. Ili nemoj, nisam ti mama.</div>
-            <button type="button" className="btn ghost" onClick={() => onGo('plan')}>Pogledaj plan</button>
+            <div className="muted small">{tr('home.doneText')}</div>
+            <button type="button" className="btn ghost" onClick={() => onGo('plan')}>{tr('home.viewPlan')}</button>
           </>
         ) : p.mode === 'plan' ? (
           <>
-            <div className="row8"><span className="tag cyan">PREDLOG</span><span className="muted small">za danas</span></div>
-            <div className="h2">Trening ili trčanje?</div>
-            <div className="muted small">Pravim predlog po tvojim ciljevima, opremi i onome što te muči.</div>
+            <div className="row8"><span className="tag cyan">{tr('home.suggest')}</span><span className="muted small">{tr('home.forToday')}</span></div>
+            <div className="h2">{tr('home.which')}</div>
+            <div className="muted small">{tr('home.suggestText')}</div>
             <div className="row10">
-              <button type="button" className="btn acid grow" onClick={() => onOpen(suggestWorkout(p, data.workouts, today))}>TRENING</button>
-              <button type="button" className="btn ghost grow" onClick={() => onOpen(suggestRun(data.workouts, today))}>Trčanje</button>
+              <button type="button" className="btn acid grow" onClick={() => onOpen(suggestWorkout(p, data.workouts, today, lang))}>{tr('home.strength')}</button>
+              <button type="button" className="btn ghost grow" onClick={() => onOpen(suggestRun(data.workouts, today, lang))}>{tr('home.run')}</button>
             </div>
           </>
         ) : (
           <>
-            <div className="row8"><span className="tag cyan">DANAS</span></div>
-            <div className="h2">Ništa planirano</div>
-            <div className="muted small">Trening sa trenerom? Upiši ga brzo u planu.</div>
-            <button type="button" className="btn acid" onClick={() => onGo('plan')}>OTVORI PLAN</button>
+            <div className="row8"><span className="tag cyan">{tr('home.today')}</span></div>
+            <div className="h2">{tr('home.nothing')}</div>
+            <div className="muted small">{tr('home.nothingText')}</div>
+            <button type="button" className="btn acid" onClick={() => onGo('plan')}>{tr('home.openPlan')}</button>
           </>
         )}
       </section>
 
       <section className="grid3">
-        <div className="tile"><div className="muted xs">Ove nedelje</div><div className="pixel">{week.length}</div></div>
-        <div className="tile"><div className="muted xs">Trčanje</div><div className="pixel">{km.toFixed(1).replace('.', ',')}<span className="xs"> km</span></div></div>
-        <div className="tile"><div className="muted xs">Podignuto</div><div className="pixel">{tons.toFixed(1).replace('.', ',')}<span className="xs"> t</span></div></div>
+        <div className="tile"><div className="muted xs">{tr('home.week')}</div><div className="pixel">{week.length}</div></div>
+        <div className="tile"><div className="muted xs">{tr('home.running')}</div><div className="pixel">{fmt(km, lang)}<span className="xs"> km</span></div></div>
+        <div className="tile"><div className="muted xs">{tr('home.lifted')}</div><div className="pixel">{fmt(tons, lang)}<span className="xs"> t</span></div></div>
       </section>
     </div>
   );
 }
 
-export function summary(w: Workout): string {
-  if (w.kind === 'run') return `Trčanje · ${w.run?.km ?? '?'} km${w.run?.minutes ? ` · ${w.run.minutes} min` : ''}`;
-  if (w.kind === 'quick') return `Brzi log${w.durationMin ? ` · ${w.durationMin} min` : ''}${w.note ? ` · ${w.note}` : ''}`;
+export function summary(w: Workout, lang: Lang): string {
+  if (w.kind === 'run') return `${t(lang, 'sum.run', { km: w.run?.km ?? '?' })}${w.run?.minutes ? ` · ${w.run.minutes} min` : ''}`;
+  if (w.kind === 'quick') return `${t(lang, 'sum.quick')}${w.durationMin ? ` · ${w.durationMin} min` : ''}${w.note ? ` · ${w.note}` : ''}`;
   const n = w.exercises.length;
-  return `${n} ${n === 1 ? 'vežba' : n < 5 ? 'vežbe' : 'vežbi'}${w.durationMin ? ` · ~${w.durationMin} min` : ''}`;
+  const word = n === 1 ? t(lang, 'sum.ex1') : n < 5 ? t(lang, 'sum.ex2') : t(lang, 'sum.ex5');
+  return `${n} ${word}${w.durationMin ? ` · ~${w.durationMin} min` : ''}`;
 }

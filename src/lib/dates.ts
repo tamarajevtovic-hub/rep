@@ -1,3 +1,5 @@
+import { DAY_NAMES, MONTHS, type Lang } from './i18n';
+
 export function toISO(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -28,10 +30,8 @@ export function startOfWeek(s: string): string {
   return toISO(d);
 }
 
-export const DAY_NAMES = ['PON', 'UTO', 'SRE', 'ČET', 'PET', 'SUB', 'NED'];
-
-export function dayName(s: string): string {
-  return DAY_NAMES[(parseISO(s).getDay() + 6) % 7];
+export function dayName(s: string, lang: Lang = 'sr'): string {
+  return DAY_NAMES[lang][(parseISO(s).getDay() + 6) % 7];
 }
 
 export function dayNum(s: string): number {
@@ -42,13 +42,8 @@ export function monthKey(s: string): string {
   return s.slice(0, 7);
 }
 
-export const MONTHS = [
-  'januar', 'februar', 'mart', 'april', 'maj', 'jun',
-  'jul', 'avgust', 'septembar', 'oktobar', 'novembar', 'decembar',
-];
-
-export function monthName(s: string): string {
-  return MONTHS[parseISO(s).getMonth()];
+export function monthName(s: string, lang: Lang = 'sr'): string {
+  return MONTHS[lang][parseISO(s).getMonth()];
 }
 
 export function daysBetween(a: string, b: string): number {

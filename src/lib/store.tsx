@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { AppData } from './types';
+import { detectLang, t, type Key, type Lang } from './i18n';
 
 const KEY = 'rep-data-v1';
 
@@ -45,6 +46,13 @@ export function useStore(): Store {
   const s = useContext(Ctx);
   if (!s) throw new Error('StoreProvider nedostaje');
   return s;
+}
+
+/** Izabrani jezik i funkcija za prevod. */
+export function useT() {
+  const { data } = useStore();
+  const lang: Lang = data.lang ?? detectLang();
+  return { lang, tr: (key: Key, vars?: Record<string, string | number>) => t(lang, key, vars) };
 }
 
 export function isValidBackup(x: unknown): x is AppData {

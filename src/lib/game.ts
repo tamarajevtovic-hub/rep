@@ -1,4 +1,4 @@
-import { COMMON_POOL, PUNK_NAMES, RARE_ANIMAL, RESCUE_COST, SPRITES } from './animals';
+import { COMMON_POOL, PUNK_NAMES, RARE_ANIMAL, RESCUE_COST } from './animals';
 import { monthKey, todayISO } from './dates';
 import type { AppData, Rescued, Workout } from './types';
 
@@ -72,8 +72,4 @@ export function rescue(d: AppData): { data: AppData; rescued?: Rescued } {
     data: { ...d, game: { ...d.game, keysSpent: d.game.keysSpent + RESCUE_COST, rescued: [...d.game.rescued, r] } },
     rescued: r,
   };
-}
-
-export function animalLabel(r: Rescued): string {
-  return SPRITES[r.animal].label;
 }

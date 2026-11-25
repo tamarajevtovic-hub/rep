@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react';
 import { SPRITES } from '../lib/animals';
+import { ANIMAL_LABELS } from '../lib/i18n';
+import { useT } from '../lib/store';
 import type { AnimalId } from '../lib/types';
 
 export function Sprite({ animal, px = 6, sleepy = false }: { animal: AnimalId; px?: number; sleepy?: boolean }) {
+  const { lang } = useT();
   const s = SPRITES[animal];
   const w = s.rows[0].length;
   const h = s.rows.length;
@@ -15,7 +18,7 @@ export function Sprite({ animal, px = 6, sleepy = false }: { animal: AnimalId; p
   });
   return (
     <span className={sleepy ? 'sprite sleepy' : 'sprite'}>
-      <svg width={w * px} height={h * px} viewBox={`0 0 ${w} ${h}`} shapeRendering="crispEdges" role="img" aria-label={s.label}>
+      <svg width={w * px} height={h * px} viewBox={`0 0 ${w} ${h}`} shapeRendering="crispEdges" role="img" aria-label={ANIMAL_LABELS[lang][animal]}>
         {rects}
       </svg>
       {sleepy && <span className="zzz" aria-hidden="true">z</span>}

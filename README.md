@@ -14,6 +14,7 @@ Radni naziv: **REP** (rep životinje + rep u teretani). Nije konačno.
 - **AI most (besplatno):** „Kopiraj za AI“ napravi tekst za Claude ili ChatGPT; odgovor se nalepi nazad i postaje plan u kalendaru, uz pregled pre ubacivanja.
 - **Motivacija:** ključ za svaki odrađen dan, 4 ključa = spašena životinja, ispunjen mesečni plan = retka životinja; saputnik sa nivoima; svetilište koje cveta ili drema, bez kazni.
 - **Telesne mere** (opciono) i **rezervna kopija** podataka (JSON).
+- **Srpski i engleski:** jezik se bira po jeziku telefona, a menja se u onboardingu ili u „Ja“. Prevodi su u `src/lib/i18n.ts`; vežbe se čuvaju pod srpskim nazivom, pa istorija ostaje ista kad se jezik promeni.
 
 Podaci se za sada čuvaju samo na telefonu (localStorage). Prijatelji i zajedničko svetilište dolaze u drugoj verziji (traže server, npr. besplatni Supabase).
 
