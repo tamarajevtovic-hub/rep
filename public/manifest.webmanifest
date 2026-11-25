@@ -1,0 +1,11 @@
+{
+  "name": "REP",
+  "short_name": "REP",
+  "description": "Planiraj, loguj i spašavaj životinje.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#141018",
+  "theme_color": "#141018",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
